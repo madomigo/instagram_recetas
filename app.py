@@ -9,13 +9,11 @@ from scraper import scrape_instagram_post, ScrapeError
 app = Flask(__name__)
 app.config['SECRET_KEY'] = settings.SECRET_KEY
 
-
 @app.route('/')
 def index():
     recipes = fetch_all_recipes()
     folders = get_folders()
     return render_template('index.html', recipes=recipes, folders=folders)
-
 
 @app.route('/folder/<folder_name>')
 def folder(folder_name):
@@ -23,7 +21,6 @@ def folder(folder_name):
     filtered = [r for r in recipes if (r['folder'] or 'General') == folder_name]
     folders = get_folders()
     return render_template('folder.html', recipes=filtered, folders=folders, current_folder=folder_name)
-
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -50,8 +47,8 @@ def add():
             'shortcode': data.get('shortcode'),
             'author': data.get('author'),
             'caption': data.get('caption'),
-            'image_url': data.get('image_url'),
-            'video_url': data.get('video_url'),
+            'image_bytes': data.get('image_bytes'),
+            'video_bytes': data.get('video_bytes'),
             'posted_at': data.get('posted_at'),
             'likes': data.get('likes'),
             'title': title,
@@ -64,7 +61,6 @@ def add():
     folders = get_folders()
     return render_template('add.html', folders=folders)
 
-
 @app.route('/recipe/<int:recipe_id>')
 def detail(recipe_id):
     recipe = fetch_recipe(recipe_id)
@@ -74,13 +70,11 @@ def detail(recipe_id):
     folders = get_folders()
     return render_template('detail.html', r=recipe, folders=folders)
 
-
 @app.route('/recipe/<int:recipe_id>/delete', methods=['POST'])
 def delete(recipe_id):
     delete_recipe(recipe_id)
     flash("Receta eliminada", "info")
     return redirect(url_for('index'))
-
 
 @app.route('/folders/create', methods=['POST'])
 def api_create_folder():
@@ -91,7 +85,6 @@ def api_create_folder():
     folder_id = create_folder(name)
     return jsonify({'ok': True, 'name': name})
 
-
 @app.route('/folders/delete', methods=['POST'])
 def api_delete_folder():
     data = request.get_json() or {}
@@ -100,7 +93,6 @@ def api_delete_folder():
         return jsonify({'ok': False, 'error': 'Falta nombre'}), 400
     delete_folder_by_name(name)
     return jsonify({'ok': True})
-
 
 if __name__ == '__main__':
     init_db()

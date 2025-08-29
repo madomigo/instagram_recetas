@@ -39,7 +39,6 @@ def fetch_all_recipes() -> List[Dict]:
     rows = []
     for r in cur.fetchall():
         row = dict(r)
-        # Convertir BLOB a base64 para mostrar en HTML
         if row['image']:
             import base64
             row['image'] = base64.b64encode(row['image']).decode('utf-8')
@@ -147,3 +146,24 @@ def delete_folder_by_name(name: str):
     cur.execute("DELETE FROM folders WHERE name = ?", (name,))
     conn.commit()
     conn.close()
+
+def search_recipes(query: str) -> List[Dict]:
+    query = f"%{query}%"
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT * FROM recipes
+        WHERE title LIKE ? OR author LIKE ?
+        ORDER BY id DESC
+    """, (query, query))
+    rows = []
+    for r in cur.fetchall():
+        row = dict(r)
+        import base64
+        if row['image']:
+            row['image'] = base64.b64encode(row['image']).decode('utf-8')
+        if row['video']:
+            row['video'] = base64.b64encode(row['video']).decode('utf-8')
+        rows.append(row)
+    conn.close()
+    return rows

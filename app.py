@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from config import settings
 from db_sqlite import (
     fetch_all_recipes, fetch_recipe, upsert_recipe, delete_recipe, init_db,
-    get_folders, create_folder, delete_folder_by_name
+    get_folders, create_folder, delete_folder_by_name, search_recipes
 )
 from scraper import scrape_instagram_post, ScrapeError
 
@@ -93,6 +93,13 @@ def api_delete_folder():
         return jsonify({'ok': False, 'error': 'Falta nombre'}), 400
     delete_folder_by_name(name)
     return jsonify({'ok': True})
+
+@app.route('/search')
+def search():
+    q = request.args.get('q', '').strip()
+    recipes = search_recipes(q) if q else []
+    folders = get_folders()
+    return render_template('search.html', recipes=recipes, folders=folders, query=q)
 
 if __name__ == '__main__':
     init_db()

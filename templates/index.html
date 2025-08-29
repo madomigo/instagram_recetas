@@ -30,7 +30,6 @@
       {% if r.video %}
       <video controls class="card-img-top" style="max-height:300px;">
         <source src="data:video/mp4;base64,{{ r.video }}" type="video/mp4">
-        Tu navegador no soporta vídeo.
       </video>
       {% elif r.image %}
       <img src="data:image/jpeg;base64,{{ r.image }}" class="card-img-top" alt="imagen receta">
@@ -58,11 +57,8 @@
       body: JSON.stringify({ name })
     });
     const data = await resp.json();
-    if (data.ok) {
-      location.reload();
-    } else {
-      alert('Error: ' + (data.error || 'no se pudo crear'));
-    }
+    if (data.ok) location.reload();
+    else alert('Error: ' + (data.error || 'no se pudo crear'));
   }
 
   async function eliminarCarpeta(name) {
@@ -74,11 +70,8 @@
       body: JSON.stringify({ name })
     });
     const data = await resp.json();
-    if (data.ok) {
-      location.reload();
-    } else {
-      alert('Error: ' + (data.error || 'no se pudo eliminar'));
-    }
+    if (data.ok) location.reload();
+    else alert('Error: ' + (data.error || 'no se pudo eliminar'));
   }
 </script>
 

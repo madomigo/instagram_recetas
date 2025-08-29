@@ -8,9 +8,16 @@
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-    <div class="container">
+    <div class="container d-flex flex-wrap align-items-center">
       <a class="navbar-brand" href="{{ url_for('index') }}">🍽️ Recetas</a>
-      <a class="btn btn-success" href="{{ url_for('add') }}">➕ Añadir</a>
+      
+      <!-- Buscador -->
+      <form class="d-flex me-auto" action="{{ url_for('search') }}" method="get">
+        <input type="text" class="form-control me-2" name="q" placeholder="Buscar por título o autor..." value="{{ request.args.get('q','') }}">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+      </form>
+
+      <a class="btn btn-success ms-2" href="{{ url_for('add') }}">➕ Añadir</a>
     </div>
   </nav>
 

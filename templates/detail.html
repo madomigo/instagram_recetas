@@ -1,19 +1,27 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>{{ r.title }}</h1>
+<h1>{{ r.title or "Receta" }}</h1>
 
-{% if r.image_url %}
-  <img src="{{ r.image_url }}" class="img-fluid rounded mb-3" alt="Imagen receta">
-{% endif %}
+<div class="mb-3">
+  {% if r.video_url %}
+  <video controls style="max-width:100%; height:auto;">
+    <source src="{{ r.video_url }}" type="video/mp4">
+    Tu navegador no soporta vídeo.
+  </video>
+  {% elif r.image_url %}
+  <img src="{{ r.image_url }}" alt="imagen receta" class="img-fluid">
+  {% endif %}
+</div>
 
 <p><strong>Autor:</strong> {{ r.author }}</p>
 <p><strong>Carpeta:</strong> {{ r.folder or 'General' }}</p>
-<p><strong>Fecha:</strong> {{ r.posted_at }}</p>
+<p><strong>Publicado:</strong> {{ r.posted_at }}</p>
 <p><strong>Likes:</strong> {{ r.likes }}</p>
+<p><strong>Descripción:</strong> {{ r.caption }}</p>
 
-<h4>Descripción</h4>
-<pre class="caption-pre">{{ r.caption }}</pre>
-
-<a href="{{ r.url }}" target="_blank" class="btn btn-outline-secondary">Ver en Instagram</a>
-<a href="{{ url_for('index') }}" class="btn btn-primary">⬅ Volver</a>
+<a href="{{ r.url }}" target="_blank" class="btn btn-outline-primary">Ver en Instagram</a>
+<form method="post" action="{{ url_for('delete', recipe_id=r.id) }}" class="d-inline">
+  <button type="submit" class="btn btn-danger">Eliminar</button>
+</form>
+<a href="{{ url_for('index') }}" class="btn btn-secondary">Volver</a>
 {% endblock %}

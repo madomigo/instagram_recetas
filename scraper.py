@@ -16,6 +16,7 @@ def scrape_instagram_post(url: str) -> dict:
             "author": post.owner_username,
             "caption": post.caption or "",
             "image_url": post.url,
+            "video_url": post.video_url,
             "posted_at": post.date_utc.isoformat(),
             "likes": post.likes,
         }

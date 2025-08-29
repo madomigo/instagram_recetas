@@ -12,17 +12,14 @@ app.config['SECRET_KEY'] = settings.SECRET_KEY
 
 @app.route('/')
 def index():
-    """Página principal con listado de carpetas y últimas recetas"""
     recipes = fetch_all_recipes()
     folders = get_folders()
-    # show latest recipes (all)
     return render_template('index.html', recipes=recipes, folders=folders)
 
 
 @app.route('/folder/<folder_name>')
 def folder(folder_name):
     recipes = fetch_all_recipes()
-    # filter by folder (folder field can be None)
     filtered = [r for r in recipes if (r['folder'] or 'General') == folder_name]
     folders = get_folders()
     return render_template('folder.html', recipes=filtered, folders=folders, current_folder=folder_name)
@@ -33,7 +30,6 @@ def add():
     if request.method == 'POST':
         url = request.form.get('url', '').strip()
         title = request.form.get('title', '').strip() or None
-        # Folder selection: either select existing or create new
         folder_select = request.form.get('folder_select')
         new_folder_name = request.form.get('new_folder_name','').strip()
         folder = None
@@ -55,6 +51,7 @@ def add():
             'author': data.get('author'),
             'caption': data.get('caption'),
             'image_url': data.get('image_url'),
+            'video_url': data.get('video_url'),
             'posted_at': data.get('posted_at'),
             'likes': data.get('likes'),
             'title': title,
@@ -85,7 +82,6 @@ def delete(recipe_id):
     return redirect(url_for('index'))
 
 
-# API endpoints for folders (AJAX)
 @app.route('/folders/create', methods=['POST'])
 def api_create_folder():
     data = request.get_json() or {}

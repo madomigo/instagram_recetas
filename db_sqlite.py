@@ -19,6 +19,7 @@ def init_db():
         author TEXT,
         caption TEXT,
         image_url TEXT,
+        video_url TEXT,
         posted_at TEXT,
         likes INTEGER,
         title TEXT,
@@ -50,18 +51,19 @@ def fetch_recipe(recipe_id: int) -> Optional[Dict]:
 def upsert_recipe(data: Dict):
     conn = get_conn()
     cur = conn.cursor()
-    # try update by url if exists
     cur.execute("SELECT id FROM recipes WHERE url=?", (data.get('url'),))
     row = cur.fetchone()
     if row:
         cur.execute("""UPDATE recipes SET
-            shortcode=?, author=?, caption=?, image_url=?, posted_at=?, likes=?, title=?, folder=?
+            shortcode=?, author=?, caption=?, image_url=?, video_url=?,
+            posted_at=?, likes=?, title=?, folder=?
             WHERE id=?
         """, (
             data.get('shortcode'),
             data.get('author'),
             data.get('caption'),
             data.get('image_url'),
+            data.get('video_url'),
             data.get('posted_at'),
             data.get('likes'),
             data.get('title'),
@@ -69,14 +71,15 @@ def upsert_recipe(data: Dict):
             row['id']
         ))
     else:
-        cur.execute("""INSERT INTO recipes (url, shortcode, author, caption, image_url, posted_at, likes, title, folder)
-            VALUES (?,?,?,?,?,?,?,?,?)
+        cur.execute("""INSERT INTO recipes (url, shortcode, author, caption, image_url, video_url, posted_at, likes, title, folder)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
         """, (
             data.get('url'),
             data.get('shortcode'),
             data.get('author'),
             data.get('caption'),
             data.get('image_url'),
+            data.get('video_url'),
             data.get('posted_at'),
             data.get('likes'),
             data.get('title'),
@@ -92,7 +95,6 @@ def delete_recipe(recipe_id: int):
     conn.commit()
     conn.close()
 
-# Folder helpers
 def get_folders() -> List[str]:
     conn = get_conn()
     cur = conn.cursor()
@@ -121,9 +123,7 @@ def create_folder(name: str) -> int:
 def delete_folder_by_name(name: str):
     conn = get_conn()
     cur = conn.cursor()
-    # unset folder on recipes
     cur.execute("UPDATE recipes SET folder = NULL WHERE folder = ?", (name,))
-    # delete folder
     cur.execute("DELETE FROM folders WHERE name = ?", (name,))
     conn.commit()
     conn.close()

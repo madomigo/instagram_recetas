@@ -27,7 +27,12 @@
   {% for r in recipes %}
   <div class="col-md-4">
     <div class="card">
-      {% if r.image_url %}
+      {% if r.video_url %}
+      <video controls class="card-img-top" style="max-height:300px;">
+        <source src="{{ r.video_url }}" type="video/mp4">
+        Tu navegador no soporta vídeo.
+      </video>
+      {% elif r.image_url %}
       <img src="{{ r.image_url }}" class="card-img-top" alt="imagen receta">
       {% endif %}
       <div class="card-body">

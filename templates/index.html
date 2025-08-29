@@ -10,7 +10,9 @@
 <div class="list-group mb-4" id="folders_list">
   {% for f in folders %}
   <div class="list-group-item d-flex justify-content-between align-items-center">
-    <a href="{{ url_for('folder', folder_name=f) }}" class="stretched-link text-decoration-none">📁 {{ f }}</a>
+    <!-- Enlace solo sobre el nombre de la carpeta -->
+    <a href="{{ url_for('folder', folder_name=f) }}" class="text-decoration-none">📁 {{ f }}</a>
+    <!-- Botón separado, sin riesgo de propagar clic al enlace -->
     <button class="btn btn-sm btn-outline-danger ms-2" onclick="eliminarCarpeta('{{ f|escape }}')">Eliminar</button>
   </div>
   {% endfor %}
@@ -67,6 +69,7 @@
 
   async function eliminarCarpeta(name) {
     if (!confirm('Eliminar carpeta "' + name + '"? (las recetas quedarán sin carpeta)')) return;
+
     const resp = await fetch('/folders/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

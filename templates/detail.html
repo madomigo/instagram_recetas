@@ -20,8 +20,12 @@
 <p><strong>Descripción:</strong> {{ r.caption }}</p>
 
 <a href="{{ r.url }}" target="_blank" class="btn btn-outline-primary">Ver en Instagram</a>
-<form method="post" action="{{ url_for('delete', recipe_id=r.id) }}" class="d-inline">
+
+<!-- Formulario con confirmación antes de enviar -->
+<form method="post" action="{{ url_for('delete', recipe_id=r.id) }}" class="d-inline"
+      onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta receta?');">
   <button type="submit" class="btn btn-danger">Eliminar</button>
 </form>
+
 <a href="{{ url_for('index') }}" class="btn btn-secondary">Volver</a>
 {% endblock %}

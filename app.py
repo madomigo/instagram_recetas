@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from config import settings
 from db_sqlite import (
-    fetch_all_recipes, fetch_recipe, upsert_recipe, delete_recipe, init_db
+    fetch_all_recipes, fetch_recipe, upsert_recipe, delete_recipe, init_db,
+    get_folders, create_folder, delete_folder_by_name
 )
 from scraper import scrape_instagram_post, ScrapeError
 
@@ -11,65 +12,70 @@ app.config['SECRET_KEY'] = settings.SECRET_KEY
 
 @app.route('/')
 def index():
-    """Lista de carpetas existentes"""
+    """Página principal con listado de carpetas y últimas recetas"""
     recipes = fetch_all_recipes()
-    folders = sorted(set(r["folder"] or "General" for r in recipes))
-    return render_template('index.html', folders=folders)
+    folders = get_folders()
+    # show latest recipes (all)
+    return render_template('index.html', recipes=recipes, folders=folders)
 
 
 @app.route('/folder/<folder_name>')
 def folder(folder_name):
-    """Muestra todas las recetas de una carpeta"""
-    recipes = [r for r in fetch_all_recipes() if (r["folder"] or "General") == folder_name]
-    return render_template('folder.html', folder=folder_name, recipes=recipes)
+    recipes = fetch_all_recipes()
+    # filter by folder (folder field can be None)
+    filtered = [r for r in recipes if (r['folder'] or 'General') == folder_name]
+    folders = get_folders()
+    return render_template('folder.html', recipes=filtered, folders=folders, current_folder=folder_name)
 
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
     if request.method == 'POST':
         url = request.form.get('url', '').strip()
-        title_input = request.form.get('title', '').strip()
-        folder_input = request.form.get('folder', '').strip() or "General"
-
-        if not url:
-            flash('Por favor, pega la URL del post.', 'warning')
-            return redirect(url_for('add'))
+        title = request.form.get('title', '').strip() or None
+        # Folder selection: either select existing or create new
+        folder_select = request.form.get('folder_select')
+        new_folder_name = request.form.get('new_folder_name','').strip()
+        folder = None
+        if folder_select == 'new' and new_folder_name:
+            create_folder(new_folder_name)
+            folder = new_folder_name
+        elif folder_select and folder_select != 'none':
+            folder = folder_select
 
         try:
             data = scrape_instagram_post(url)
-            caption = data.get("caption") or ""
-
-            if title_input:
-                title = title_input
-            else:
-                first_line = caption.splitlines()[0].strip() if caption.strip() else ""
-                if first_line:
-                    title = first_line if len(first_line) <= 60 else (first_line[:57] + "...")
-                else:
-                    title = f"{data.get('author') or 'Receta'} - {data.get('shortcode')}"
-
-            data['title'] = title
-            data['folder'] = folder_input
-
-            upsert_recipe(data)
-            flash('Receta guardada correctamente ✅', 'success')
-            return redirect(url_for('folder', folder_name=folder_input))
-
         except ScrapeError as e:
-            flash(f'Error al extraer el post: {e}', 'danger')
-        except Exception as e:
-            flash(f'Error inesperado: {e}', 'danger')
+            flash(f'Error al obtener datos del post: {e}', 'danger')
+            return redirect(url_for('add'))
 
-    return render_template('add.html')
+        recipe = {
+            'url': url,
+            'shortcode': data.get('shortcode'),
+            'author': data.get('author'),
+            'caption': data.get('caption'),
+            'image_url': data.get('image_url'),
+            'posted_at': data.get('posted_at'),
+            'likes': data.get('likes'),
+            'title': title,
+            'folder': folder
+        }
+        upsert_recipe(recipe)
+        flash('Receta añadida correctamente', 'success')
+        return redirect(url_for('index'))
+
+    folders = get_folders()
+    return render_template('add.html', folders=folders)
 
 
-@app.route('/folder/<folder_name>/recipe/<int:recipe_id>')
-def detail(folder_name, recipe_id):
+@app.route('/recipe/<int:recipe_id>')
+def detail(recipe_id):
     recipe = fetch_recipe(recipe_id)
     if not recipe:
         flash("Receta no encontrada", "warning")
-        return redirect(url_for('folder', folder_name=folder_name))
-    return render_template('detail.html', r=recipe)
+        return redirect(url_for('index'))
+    folders = get_folders()
+    return render_template('detail.html', r=recipe, folders=folders)
 
 
 @app.route('/recipe/<int:recipe_id>/delete', methods=['POST'])
@@ -77,6 +83,27 @@ def delete(recipe_id):
     delete_recipe(recipe_id)
     flash("Receta eliminada", "info")
     return redirect(url_for('index'))
+
+
+# API endpoints for folders (AJAX)
+@app.route('/folders/create', methods=['POST'])
+def api_create_folder():
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'ok': False, 'error': 'Nombre vacío'}), 400
+    folder_id = create_folder(name)
+    return jsonify({'ok': True, 'name': name})
+
+
+@app.route('/folders/delete', methods=['POST'])
+def api_delete_folder():
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'ok': False, 'error': 'Falta nombre'}), 400
+    delete_folder_by_name(name)
+    return jsonify({'ok': True})
 
 
 if __name__ == '__main__':

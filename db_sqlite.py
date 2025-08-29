@@ -153,9 +153,12 @@ def search_recipes(query: str) -> List[Dict]:
     cur = conn.cursor()
     cur.execute("""
         SELECT * FROM recipes
-        WHERE title LIKE ? OR author LIKE ?
+        WHERE 
+            (LOWER(title) LIKE ?)
+            OR (LOWER(author) LIKE ?)
+            OR (LOWER(caption) LIKE ?)
         ORDER BY id DESC
-    """, (query, query))
+    """, (query, query, query))
     rows = []
     for r in cur.fetchall():
         row = dict(r)

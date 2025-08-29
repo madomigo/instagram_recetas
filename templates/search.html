@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>🔍 Resultados de búsqueda: "{{ query }}"</h1>
+<h1>🔍 Resultados para "{{ query }}"</h1>
 
 {% if recipes %}
 <div class="row g-3">
@@ -15,8 +15,9 @@
       <img src="data:image/jpeg;base64,{{ r.image }}" class="card-img-top" alt="imagen receta">
       {% endif %}
       <div class="card-body">
-        <h5 class="card-title">{{ r.title or r.caption[:50] }}</h5>
-        <p class="card-text"><small class="text-muted">🍳 {{ r.folder or 'General' }}</small></p>
+        <h5 class="card-title">{{ r.title or 'Sin título' }}</h5>
+        <p class="card-text"><strong>@{{ r.author }}</strong></p>
+        <p class="card-text">{{ r.caption[:100] }}...</p>
         <a href="{{ url_for('detail', recipe_id=r.id) }}" class="btn btn-primary btn-sm">Ver</a>
       </div>
     </div>
@@ -24,8 +25,6 @@
   {% endfor %}
 </div>
 {% else %}
-<p>No se encontraron recetas.</p>
+<p>No se encontraron recetas que coincidan.</p>
 {% endif %}
-
-<a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">⬅ Volver</a>
 {% endblock %}

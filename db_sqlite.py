@@ -156,10 +156,60 @@ def create_folder(name: str) -> int:
     conn.close()
     return folder_id
 
-def delete_folder_by_name(name: str):
+def update_recipe_folder(recipe_id: int, folder: str):
+    """Actualiza la carpeta de una receta específica."""
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("UPDATE recipes SET folder=NULL WHERE folder=?", (name,))
+    cur.execute("UPDATE recipes SET folder=? WHERE id=?", (folder, recipe_id))
+    conn.commit()
+    conn.close()
+
+def delete_folder_by_name(name: str):
+    """
+    Al eliminar una carpeta, mover todos los posts a "Otros" en vez de NULL.
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+    # Asegurarnos de que la carpeta "Otros" existe
+    cur.execute("INSERT OR IGNORE INTO folders (name) VALUES ('Otros')")
+    # Mover recetas a "Otros"
+    cur.execute("UPDATE recipes SET folder='Otros' WHERE folder=?", (name,))
+    # Eliminar la carpeta
     cur.execute("DELETE FROM folders WHERE name=?", (name,))
     conn.commit()
     conn.close()
+
+def sync_folders():
+    """
+    Asegura que todos los valores distintos de recipes.folder
+    existan en la tabla folders.
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # 1. obtener todas las carpetas distintas usadas en recetas
+    cur.execute("SELECT DISTINCT folder FROM recipes WHERE folder IS NOT NULL AND TRIM(folder) != ''")
+    recipe_folders = {r['folder'].strip() for r in cur.fetchall()}
+
+    # 2. obtener las carpetas que ya existen en folders
+    cur.execute("SELECT name FROM folders")
+    existing_folders = {r['name'].strip() for r in cur.fetchall()}
+
+    # 3. calcular las que faltan
+    missing = recipe_folders - existing_folders
+
+    # 4. insertar las que falten
+    for name in sorted(missing):
+        try:
+            cur.execute("INSERT INTO folders (name) VALUES (?)", (name,))
+            print(f"🟢 Añadida carpeta faltante: {name}")
+        except sqlite3.IntegrityError:
+            pass
+
+    conn.commit()
+    conn.close()
+    print("✅ Sincronización completada")
+
+if __name__ == "__main__":
+    init_db()
+    sync_folders()

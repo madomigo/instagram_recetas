@@ -131,6 +131,20 @@ def search():
     return render_template('search.html', recipes=recipes, folders=folders, query=q,
                            page=page, total_pages=total_pages)
 
+# Nueva ruta para cambiar carpeta de un post
+@app.route('/recipe/<int:recipe_id>/change_folder', methods=['POST'])
+def change_recipe_folder(recipe_id):
+    new_folder = request.form.get('folder_select')
+    if not new_folder:
+        flash("Carpeta no válida", "warning")
+    else:
+        from db_sqlite import update_recipe_folder, create_folder
+        # Crear carpeta si no existe
+        create_folder(new_folder)
+        update_recipe_folder(recipe_id, new_folder)
+        flash(f"Carpeta actualizada a '{new_folder}'", "success")
+    return redirect(url_for('detail', recipe_id=recipe_id))
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)

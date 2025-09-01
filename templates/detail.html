@@ -13,7 +13,22 @@
 </div>
 
 <p><strong>Autor:</strong> {{ r.author }}</p>
+
 <p><strong>Carpeta:</strong> {{ r.folder or 'General' }}</p>
+
+<!-- Formulario para cambiar carpeta -->
+<form method="post" action="{{ url_for('change_recipe_folder', recipe_id=r.id) }}" class="mb-3">
+  <div class="input-group" style="max-width:300px;">
+    <select name="folder_select" class="form-select">
+      {% for f in folders %}
+      <option value="{{ f }}" {% if f == r.folder %}selected{% endif %}>{{ f }}</option>
+      {% endfor %}
+      <option value="Otros" {% if r.folder == 'Otros' %}selected{% endif %}>Otros</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Cambiar</button>
+  </div>
+</form>
+
 <p><strong>Publicado:</strong> {{ r.posted_at }}</p>
 <p><strong>Likes:</strong> {{ r.likes }}</p>
 <p><strong>Descripción:</strong> {{ r.caption }}</p>

@@ -4,7 +4,7 @@
 
 <div class="mb-3">
 {% if r.video_path %}
-<video controls preload="none" style="max-width:100%; height:auto;">
+<video controls preload="auto" style="max-width:100%; height:auto;">
   <source src="{{ url_for('static', filename='uploads/' + r.video_path) }}" type="video/mp4">
 </video>
 {% elif r.image_path %}

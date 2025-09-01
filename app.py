@@ -10,7 +10,7 @@ from scraper import scrape_instagram_post, ScrapeError
 app = Flask(__name__)
 app.config['SECRET_KEY'] = settings.SECRET_KEY
 
-PER_PAGE = 20  # recetas por página
+PER_PAGE = 21  # recetas por página
 
 @app.route('/')
 def index():
@@ -52,26 +52,21 @@ def add():
             flash(f'Error al obtener datos del post: {e}', 'danger')
             return redirect(url_for('add'))
 
-        # Guardar las imágenes/videos en disco (centralizado aquí)
         shortcode = data.get('shortcode')
         image_path = None
         video_path = None
 
-        # Si el scraper devuelve bytes, los escribimos con el nombre <shortcode>.(jpg|mp4)
+        # Guardar siempre la imagen (thumbnail o foto del post)
         if data.get('image_bytes'):
             image_path = f"{shortcode}.jpg"
             with open(UPLOAD_FOLDER / image_path, "wb") as f:
                 f.write(data['image_bytes'])
-        # Si el scraper ya devolviera image_path (por compatibilidad), lo usamos
-        elif data.get('image_path'):
-            image_path = data.get('image_path')
 
+        # Guardar vídeo si existe
         if data.get('video_bytes'):
             video_path = f"{shortcode}.mp4"
             with open(UPLOAD_FOLDER / video_path, "wb") as f:
                 f.write(data['video_bytes'])
-        elif data.get('video_path'):
-            video_path = data.get('video_path')
 
         recipe = {
             'url': url,

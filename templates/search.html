@@ -7,11 +7,7 @@
   {% for r in recipes %}
   <div class="col">
     <div class="card h-100">
-      {% if r.video_path %}
-      <video controls preload="none" class="card-img-top" style="width:100%; max-height:300px;">
-        <source src="{{ url_for('static', filename='uploads/' + r.video_path) }}" type="video/mp4">
-      </video>
-      {% elif r.image_path %}
+      {% if r.image_path %}
       <img src="{{ url_for('static', filename='uploads/' + r.image_path) }}" class="card-img-top" alt="imagen receta">
       {% endif %}
       <div class="card-body">

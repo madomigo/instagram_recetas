@@ -3,14 +3,13 @@
 <h1>{{ r.title or "Receta" }}</h1>
 
 <div class="mb-3">
-  {% if r.video %}
-  <video controls style="max-width:100%; height:auto;">
-    <source src="data:video/mp4;base64,{{ r.video }}" type="video/mp4">
-    Tu navegador no soporta vídeo.
-  </video>
-  {% elif r.image %}
-  <img src="data:image/jpeg;base64,{{ r.image }}" alt="imagen receta" class="img-fluid">
-  {% endif %}
+{% if r.video_path %}
+<video controls preload="none" style="max-width:100%; height:auto;">
+  <source src="{{ url_for('static', filename='uploads/' + r.video_path) }}" type="video/mp4">
+</video>
+{% elif r.image_path %}
+<img src="{{ url_for('static', filename='uploads/' + r.image_path) }}" alt="imagen receta" class="img-fluid">
+{% endif %}
 </div>
 
 <p><strong>Autor:</strong> {{ r.author }}</p>
@@ -20,11 +19,8 @@
 <p><strong>Descripción:</strong> {{ r.caption }}</p>
 
 <a href="{{ r.url }}" target="_blank" class="btn btn-outline-primary">Ver en Instagram</a>
-
-<form method="post" action="{{ url_for('delete', recipe_id=r.id) }}" class="d-inline"
-      onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta receta?');">
+<form method="post" action="{{ url_for('delete', recipe_id=r.id) }}" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta receta?');">
   <button type="submit" class="btn btn-danger">Eliminar</button>
 </form>
-
 <a href="{{ url_for('index') }}" class="btn btn-secondary">Volver</a>
 {% endblock %}

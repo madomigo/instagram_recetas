@@ -1,0 +1,19 @@
+{% if total_pages > 1 %}
+<nav aria-label="Paginación" class="mt-4">
+  <div class="d-flex justify-content-center flex-wrap">
+    <ul class="pagination pagination-sm mb-0">
+      <li class="page-item {% if page == 1 %}disabled{% endif %}">
+        <a class="page-link" href="?page={{ page-1 }}{% if query %}&q={{ query }}{% endif %}{% if current_folder %}&folder={{ current_folder }}{% endif %}">Anterior</a>
+      </li>
+      {% for p in range(1, total_pages+1) %}
+      <li class="page-item {% if page == p %}active{% endif %}">
+        <a class="page-link" href="?page={{ p }}{% if query %}&q={{ query }}{% endif %}{% if current_folder %}&folder={{ current_folder }}{% endif %}">{{ p }}</a>
+      </li>
+      {% endfor %}
+      <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+        <a class="page-link" href="?page={{ page+1 }}{% if query %}&q={{ query }}{% endif %}{% if current_folder %}&folder={{ current_folder }}{% endif %}">Siguiente</a>
+      </li>
+    </ul>
+  </div>
+</nav>
+{% endif %}

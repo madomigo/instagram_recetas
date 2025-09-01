@@ -1,17 +1,16 @@
 {% extends 'base.html' %}
 {% block content %}
 <h1 class="mb-3">📂 Mis carpetas de recetas</h1>
-
-<div class="mb-3">
+<div class="mb-3 d-flex flex-wrap gap-2">
   <button class="btn btn-sm btn-success" onclick="crearCarpeta()">+ Crear carpeta</button>
 </div>
 
 {% if folders %}
-<div class="list-group mb-4" id="folders_list">
+<div class="list-group mb-4">
   {% for f in folders %}
-  <div class="list-group-item d-flex justify-content-between align-items-center">
-    <a href="{{ url_for('folder', folder_name=f) }}" class="text-decoration-none">📁 {{ f }}</a>
-    <button class="btn btn-sm btn-outline-danger ms-2" onclick="eliminarCarpeta('{{ f|escape }}')">Eliminar</button>
+  <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+    <a href="{{ url_for('folder', folder_name=f) }}" class="text-decoration-none flex-grow-1">📁 {{ f }}</a>
+    <button class="btn btn-sm btn-outline-danger ms-2 mt-1 mt-md-0" onclick="eliminarCarpeta('{{ f|escape }}')">Eliminar</button>
   </div>
   {% endfor %}
 </div>
@@ -20,19 +19,18 @@
 {% endif %}
 
 <hr>
-
 <h2>Últimas recetas</h2>
 {% if recipes %}
-<div class="row g-3">
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
   {% for r in recipes %}
-  <div class="col-md-4">
-    <div class="card">
-      {% if r.video %}
-      <video controls class="card-img-top" style="max-height:300px;">
-        <source src="data:video/mp4;base64,{{ r.video }}" type="video/mp4">
+  <div class="col">
+    <div class="card h-100">
+      {% if r.video_path %}
+      <video controls preload="none" class="card-img-top" style="max-height:300px; width:100%;">
+        <source src="{{ url_for('static', filename='uploads/' + r.video_path) }}" type="video/mp4">
       </video>
-      {% elif r.image %}
-      <img src="data:image/jpeg;base64,{{ r.image }}" class="card-img-top" alt="imagen receta">
+      {% elif r.image_path %}
+      <img src="{{ url_for('static', filename='uploads/' + r.image_path) }}" class="card-img-top" alt="imagen receta">
       {% endif %}
       <div class="card-body">
         <h5 class="card-title">{{ r.title or r.caption[:50] }}</h5>
@@ -43,36 +41,36 @@
   </div>
   {% endfor %}
 </div>
+
+{% include 'pagination.html' with context %}
 {% else %}
 <p>No hay recetas aún.</p>
 {% endif %}
 
 <script>
-  async function crearCarpeta() {
+async function crearCarpeta() {
     const name = prompt('Nombre de la nueva carpeta:');
     if (!name) return;
     const resp = await fetch('/folders/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
     });
     const data = await resp.json();
     if (data.ok) location.reload();
     else alert('Error: ' + (data.error || 'no se pudo crear'));
-  }
+}
 
-  async function eliminarCarpeta(name) {
+async function eliminarCarpeta(name) {
     if (!confirm('Eliminar carpeta "' + name + '"? (las recetas quedarán sin carpeta)')) return;
-
     const resp = await fetch('/folders/delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
     });
     const data = await resp.json();
     if (data.ok) location.reload();
     else alert('Error: ' + (data.error || 'no se pudo eliminar'));
-  }
+}
 </script>
-
 {% endblock %}

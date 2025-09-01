@@ -1,26 +1,35 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from config import settings
 from db_sqlite import (
-    fetch_all_recipes, fetch_recipe, upsert_recipe, delete_recipe, init_db,
-    get_folders, create_folder, delete_folder_by_name, search_recipes
+    fetch_recipe, upsert_recipe, delete_recipe, init_db,
+    get_folders, create_folder, delete_folder_by_name,
+    fetch_recipes_paginated, count_recipes, UPLOAD_FOLDER
 )
 from scraper import scrape_instagram_post, ScrapeError
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = settings.SECRET_KEY
 
+PER_PAGE = 20  # recetas por página
+
 @app.route('/')
 def index():
-    recipes = fetch_all_recipes()
+    page = max(1, int(request.args.get('page', 1)))
+    total = count_recipes()
+    recipes = fetch_recipes_paginated(limit=PER_PAGE, offset=(page-1)*PER_PAGE)
     folders = get_folders()
-    return render_template('index.html', recipes=recipes, folders=folders)
+    total_pages = (total + PER_PAGE - 1) // PER_PAGE
+    return render_template('index.html', recipes=recipes, folders=folders, page=page, total_pages=total_pages)
 
 @app.route('/folder/<folder_name>')
 def folder(folder_name):
-    recipes = fetch_all_recipes()
-    filtered = [r for r in recipes if (r['folder'] or 'General') == folder_name]
+    page = max(1, int(request.args.get('page', 1)))
+    total = count_recipes(folder=folder_name)
+    recipes = fetch_recipes_paginated(limit=PER_PAGE, offset=(page-1)*PER_PAGE, folder=folder_name)
     folders = get_folders()
-    return render_template('folder.html', recipes=filtered, folders=folders, current_folder=folder_name)
+    total_pages = (total + PER_PAGE - 1) // PER_PAGE
+    return render_template('folder.html', recipes=recipes, folders=folders,
+                           current_folder=folder_name, page=page, total_pages=total_pages)
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -30,6 +39,7 @@ def add():
         folder_select = request.form.get('folder_select')
         new_folder_name = request.form.get('new_folder_name','').strip()
         folder = None
+
         if folder_select == 'new' and new_folder_name:
             create_folder(new_folder_name)
             folder = new_folder_name
@@ -42,13 +52,34 @@ def add():
             flash(f'Error al obtener datos del post: {e}', 'danger')
             return redirect(url_for('add'))
 
+        # Guardar las imágenes/videos en disco (centralizado aquí)
+        shortcode = data.get('shortcode')
+        image_path = None
+        video_path = None
+
+        # Si el scraper devuelve bytes, los escribimos con el nombre <shortcode>.(jpg|mp4)
+        if data.get('image_bytes'):
+            image_path = f"{shortcode}.jpg"
+            with open(UPLOAD_FOLDER / image_path, "wb") as f:
+                f.write(data['image_bytes'])
+        # Si el scraper ya devolviera image_path (por compatibilidad), lo usamos
+        elif data.get('image_path'):
+            image_path = data.get('image_path')
+
+        if data.get('video_bytes'):
+            video_path = f"{shortcode}.mp4"
+            with open(UPLOAD_FOLDER / video_path, "wb") as f:
+                f.write(data['video_bytes'])
+        elif data.get('video_path'):
+            video_path = data.get('video_path')
+
         recipe = {
             'url': url,
-            'shortcode': data.get('shortcode'),
+            'shortcode': shortcode,
             'author': data.get('author'),
             'caption': data.get('caption'),
-            'image_bytes': data.get('image_bytes'),
-            'video_bytes': data.get('video_bytes'),
+            'image_path': image_path,
+            'video_path': video_path,
             'posted_at': data.get('posted_at'),
             'likes': data.get('likes'),
             'title': title,
@@ -97,9 +128,13 @@ def api_delete_folder():
 @app.route('/search')
 def search():
     q = request.args.get('q', '').strip()
-    recipes = search_recipes(q) if q else []
+    page = max(1, int(request.args.get('page', 1)))
+    total = count_recipes(query=q) if q else 0
+    recipes = fetch_recipes_paginated(limit=PER_PAGE, offset=(page-1)*PER_PAGE, query=q) if q else []
     folders = get_folders()
-    return render_template('search.html', recipes=recipes, folders=folders, query=q)
+    total_pages = (total + PER_PAGE - 1) // PER_PAGE
+    return render_template('search.html', recipes=recipes, folders=folders, query=q,
+                           page=page, total_pages=total_pages)
 
 if __name__ == '__main__':
     init_db()

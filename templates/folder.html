@@ -1,34 +1,36 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>📁 Carpeta: {{ folder }}</h1>
+<h1>📁 Carpeta: {{ current_folder }}</h1>
 
 {% if recipes %}
-  <div class="row">
-    {% for r in recipes %}
-    <div class="col-md-4 mb-4">
-      <div class="card h-100 shadow-sm">
-        {% if r.video %}
-          <video controls class="card-img-top" style="max-height:200px;">
-            <source src="data:video/mp4;base64,{{ r.video }}" type="video/mp4">
-            Tu navegador no soporta vídeo.
-          </video>
-        {% elif r.image %}
-          <img src="data:image/jpeg;base64,{{ r.image }}" class="card-img-top" alt="Imagen receta">
-        {% endif %}
-        <div class="card-body">
-          <h5 class="card-title">{{ r.title }}</h5>
-          <p class="card-text"><small class="text-muted">Autor: {{ r.author }}</small></p>
-          <a href="{{ url_for('detail', recipe_id=r.id) }}" class="btn btn-primary btn-sm">Ver</a>
-          <form action="{{ url_for('delete', recipe_id=r.id) }}" method="post" style="display:inline-block" onsubmit="return confirm('¿Seguro que quieres borrar esta receta?')">
-            <button class="btn btn-danger btn-sm">Eliminar</button>
-          </form>
-        </div>
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+  {% for r in recipes %}
+  <div class="col">
+    <div class="card h-100">
+      {% if r.video_path %}
+      <video controls preload="none" class="card-img-top" style="width:100%; max-height:200px;">
+        <source src="{{ url_for('static', filename='uploads/' + r.video_path) }}" type="video/mp4">
+      </video>
+      {% elif r.image_path %}
+      <img src="{{ url_for('static', filename='uploads/' + r.image_path) }}" class="card-img-top" alt="Imagen receta">
+      {% endif %}
+      <div class="card-body">
+        <h5 class="card-title">{{ r.title or 'Sin título' }}</h5>
+        <p class="card-text"><small class="text-muted">Autor: {{ r.author }}</small></p>
+        <a href="{{ url_for('detail', recipe_id=r.id) }}" class="btn btn-primary btn-sm">Ver</a>
+        <form action="{{ url_for('delete', recipe_id=r.id) }}" method="post" style="display:inline-block"
+              onsubmit="return confirm('¿Seguro que quieres borrar esta receta?')">
+          <button class="btn btn-danger btn-sm">Eliminar</button>
+        </form>
       </div>
     </div>
-    {% endfor %}
   </div>
+  {% endfor %}
+</div>
+
+{% include 'pagination.html' with context %}
 {% else %}
-  <p>No hay recetas en esta carpeta todavía.</p>
+<p>No hay recetas en esta carpeta todavía.</p>
 {% endif %}
 
 <a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">⬅ Volver a carpetas</a>

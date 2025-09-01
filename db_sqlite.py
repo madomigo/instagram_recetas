@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 DB_FILE = Path(__file__).resolve().parent / "recetas_dev.db"
+UPLOAD_FOLDER = Path(__file__).resolve().parent / "static/uploads"
+UPLOAD_FOLDER.mkdir(exist_ok=True, parents=True)
 
 def get_conn():
     conn = sqlite3.connect(DB_FILE)
@@ -12,42 +14,80 @@ def get_conn():
 def init_db():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS recipes (
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS recipes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         url TEXT UNIQUE,
         shortcode TEXT,
         author TEXT,
         caption TEXT,
-        image BLOB,
-        video BLOB,
+        image_path TEXT,
+        video_path TEXT,
         posted_at TEXT,
         likes INTEGER,
         title TEXT,
         folder TEXT
-    )""")
-    cur.execute("""CREATE TABLE IF NOT EXISTS folders (
+    )
+    """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS folders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE
-    )""")
+    )
+    """)
     conn.commit()
     conn.close()
 
-def fetch_all_recipes() -> List[Dict]:
+def fetch_recipes_paginated(limit: int, offset: int = 0, folder: Optional[str] = None, query: Optional[str] = None) -> List[Dict]:
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM recipes ORDER BY id DESC")
-    rows = []
-    for r in cur.fetchall():
-        row = dict(r)
-        if row['image']:
-            import base64
-            row['image'] = base64.b64encode(row['image']).decode('utf-8')
-        if row['video']:
-            import base64
-            row['video'] = base64.b64encode(row['video']).decode('utf-8')
-        rows.append(row)
+    sql = "SELECT * FROM recipes"
+    params = []
+    conditions = []
+
+    if folder:
+        conditions.append("(folder = ?)")
+        params.append(folder)
+
+    if query:
+        q = f"%{query.lower()}%"
+        conditions.append("(LOWER(title) LIKE ? OR LOWER(author) LIKE ? OR LOWER(caption) LIKE ?)")
+        params.extend([q, q, q])
+
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+
+    sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+
+    cur.execute(sql, params)
+    rows = [dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
+
+def count_recipes(folder: Optional[str] = None, query: Optional[str] = None) -> int:
+    conn = get_conn()
+    cur = conn.cursor()
+    sql = "SELECT COUNT(*) FROM recipes"
+    params = []
+    conditions = []
+
+    if folder:
+        conditions.append("(folder = ?)")
+        params.append(folder)
+
+    if query:
+        q = f"%{query.lower()}%"
+        conditions.append("(LOWER(title) LIKE ? OR LOWER(author) LIKE ? OR LOWER(caption) LIKE ?)")
+        params.extend([q, q, q])
+
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+
+    cur.execute(sql, params)
+    total = cur.fetchone()[0]
+    conn.close()
+    return total
 
 def fetch_recipe(recipe_id: int) -> Optional[Dict]:
     conn = get_conn()
@@ -55,54 +95,31 @@ def fetch_recipe(recipe_id: int) -> Optional[Dict]:
     cur.execute("SELECT * FROM recipes WHERE id=?", (recipe_id,))
     row = cur.fetchone()
     conn.close()
-    if not row:
-        return None
-    row = dict(row)
-    import base64
-    if row['image']:
-        row['image'] = base64.b64encode(row['image']).decode('utf-8')
-    if row['video']:
-        row['video'] = base64.b64encode(row['video']).decode('utf-8')
-    return row
+    return dict(row) if row else None
 
 def upsert_recipe(data: Dict):
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT id FROM recipes WHERE url=?", (data.get('url'),))
     row = cur.fetchone()
-    image_bytes = data.get('image_bytes')
-    video_bytes = data.get('video_bytes')
+
     if row:
-        cur.execute("""UPDATE recipes SET
-            shortcode=?, author=?, caption=?, image=?, video=?,
-            posted_at=?, likes=?, title=?, folder=?
-            WHERE id=?
+        cur.execute("""
+        UPDATE recipes SET shortcode=?, author=?, caption=?, image_path=?, video_path=?, posted_at=?, likes=?, title=?, folder=?
+        WHERE id=?
         """, (
-            data.get('shortcode'),
-            data.get('author'),
-            data.get('caption'),
-            image_bytes,
-            video_bytes,
-            data.get('posted_at'),
-            data.get('likes'),
-            data.get('title'),
-            data.get('folder'),
-            row['id']
+            data.get('shortcode'), data.get('author'), data.get('caption'),
+            data.get('image_path'), data.get('video_path'), data.get('posted_at'),
+            data.get('likes'), data.get('title'), data.get('folder'), row['id']
         ))
     else:
-        cur.execute("""INSERT INTO recipes (url, shortcode, author, caption, image, video, posted_at, likes, title, folder)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
+        cur.execute("""
+        INSERT INTO recipes (url, shortcode, author, caption, image_path, video_path, posted_at, likes, title, folder)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
         """, (
-            data.get('url'),
-            data.get('shortcode'),
-            data.get('author'),
-            data.get('caption'),
-            image_bytes,
-            video_bytes,
-            data.get('posted_at'),
-            data.get('likes'),
-            data.get('title'),
-            data.get('folder')
+            data.get('url'), data.get('shortcode'), data.get('author'), data.get('caption'),
+            data.get('image_path'), data.get('video_path'), data.get('posted_at'),
+            data.get('likes'), data.get('title'), data.get('folder')
         ))
     conn.commit()
     conn.close()
@@ -142,31 +159,7 @@ def create_folder(name: str) -> int:
 def delete_folder_by_name(name: str):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("UPDATE recipes SET folder = NULL WHERE folder = ?", (name,))
-    cur.execute("DELETE FROM folders WHERE name = ?", (name,))
+    cur.execute("UPDATE recipes SET folder=NULL WHERE folder=?", (name,))
+    cur.execute("DELETE FROM folders WHERE name=?", (name,))
     conn.commit()
     conn.close()
-
-def search_recipes(query: str) -> List[Dict]:
-    query = f"%{query}%"
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT * FROM recipes
-        WHERE 
-            (LOWER(title) LIKE ?)
-            OR (LOWER(author) LIKE ?)
-            OR (LOWER(caption) LIKE ?)
-        ORDER BY id DESC
-    """, (query, query, query))
-    rows = []
-    for r in cur.fetchall():
-        row = dict(r)
-        import base64
-        if row['image']:
-            row['image'] = base64.b64encode(row['image']).decode('utf-8')
-        if row['video']:
-            row['video'] = base64.b64encode(row['video']).decode('utf-8')
-        rows.append(row)
-    conn.close()
-    return rows

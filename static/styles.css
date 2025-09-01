@@ -13,8 +13,36 @@ body {
   white-space: pre-wrap;
 }
 
-img {
-  max-width: 100%;
+/* Cards y vídeos/imágenes ocupen todo el ancho del contenedor */
+.card img, .card video {
+  width: 100%;
   height: auto;
-  border-radius: 10px;
+  object-fit: cover;
+}
+
+/* Paginación adaptativa */
+.pagination {
+  flex-wrap: wrap;
+  justify-content: center;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.pagination a {
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Lista de carpetas adaptable */
+.list-group-item {
+  flex-wrap: wrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Navbar y formularios adaptativos */
+.navbar .form-control {
+  flex: 1 1 auto;
+  min-width: 100px;
 }

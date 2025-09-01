@@ -1,1 +1,5 @@
-.env
+.env 
+recetas_dev2.db 
+recetas_dev1.db 
+static/uploads/
+recetas_dev.db
